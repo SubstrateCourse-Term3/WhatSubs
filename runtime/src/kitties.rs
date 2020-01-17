@@ -181,6 +181,7 @@ impl<T: Trait> Module<T> {
 		let min: T::BlockNumber = T::MinBreedingAge::get();
 		let delta: T::BlockNumber = T::MaxLifespanDelta::get();
 		let ran: T::BlockNumber = (u128::from_be_bytes(Self::random_value(sender)) as u32).into();
+		ran < delta && ran < min
 		// TODO 随机生成猫的寿命, 如果2s一个块. 猫能活一天 86400s, 相当于 86400/2 个块. 寿命在一定范围内随机. 13~15年. 可以以注入的方式配置. 为了测试, 可以调短一点.
 		(86400 / 2).into()
 	}

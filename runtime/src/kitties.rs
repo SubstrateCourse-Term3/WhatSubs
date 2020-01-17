@@ -23,7 +23,7 @@ pub trait Trait: system::Trait {
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
 #[cfg_attr(feature = "std", derive(Debug, PartialEq, Eq))]
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 pub struct Kitty<T> where T: Trait {
 	pub dna: [u8; 16],
 	pub lifespan: T::BlockNumber,
@@ -264,11 +264,20 @@ impl<T: Trait> Module<T> {
 		ensure!(Self::kitty_owner(&kitty_id_2).map(|owner| owner == *sender).unwrap_or(false), Error::<T>::RequiresOwner);
 
 		// TODO 验证两只猫的年龄. 是否可以繁殖后代, 使用 MAX_BREEDING_AGE 和猫属性一起判断
-
 		let kitty_id = Self::next_kitty_id()?;
+  	let kitty1_clone = kitty1.clone();
+  	let kitty2_clone = kitty2.clone();
+  	let kitty1_dna = kitty1.unwrap().dna;
+  	let kitty2_dna = kitty2.unwrap().dna;
+  	let kitty1_age = Self::block_number() - kitty1_clone.unwrap().birthday;
+   	let kitty2_age = Self::block_number() - kitty2_clone.unwrap().birthday;
 
-		let kitty1_dna = kitty1.unwrap().dna;
-		let kitty2_dna = kitty2.unwrap().dna;
+  	let max_breed_age: T::BlockNumber = T::MaxBreedingAge::get();
+  	let min_breed_age: T::BlockNumber = T::MinBreedingAge::get();
+  	ensure!((kitty1_age < min_breed_age), "kitty1 too young");
+   	ensure!((kitty1_age > max_breed_age), "kitty1 too old");
+   	ensure!((kitty2_age < min_breed_age), "kitty2 too young");
+   	ensure!((kitty2_age > max_breed_age), "kitty2 too old");
 
 		// Generate a random 128bit value
 		let selector = Self::random_value(&sender);

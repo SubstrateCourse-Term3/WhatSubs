@@ -5,6 +5,14 @@ use frame_support::{Parameter, StorageMap, StorageValue, ensure};
 use sp_runtime::traits::{SimpleArithmetic, Bounded};
 use sp_std::marker::PhantomData;
 
+/*
+### binary heap
+* runtime/src/binary_heap.rs
+* 实现了最小堆, 参考了Rust标准库中的堆实现.
+* 如果有10000只猫, 树高14层.
+* 通过测试
+*/
+
 pub struct MinHeap<Index, Value, Count, Map> (PhantomData<(Index, Value, Count, Map)>);
 
 impl<Index, Value, Count, Map> MinHeap<Index, Value, Count, Map>

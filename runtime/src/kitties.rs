@@ -75,16 +75,16 @@ decl_event!(
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		RequiresOwner,
-		InvalidKittyId,
-		KittyNotForSale,
-		PriceTooLow,
-		KittiesCountOverflow,
-		RequiresDifferentParents,
-		Kitty1TooYoung,
-		Kitty1TooOld,
-		Kitty2TooYoung,
-		Kitty2TooOld,
+		RequiresOwner,//0
+		InvalidKittyId,//1
+		KittyNotForSale,//2
+		PriceTooLow,//3
+		KittiesCountOverflow,//4
+		RequiresDifferentParents,//5
+		Kitty1TooYoung,//6
+		Kitty1TooOld,//7
+		Kitty2TooYoung,//8
+		Kitty2TooOld,//9
 	}
 }
 
@@ -174,8 +174,7 @@ impl<T: Trait> Module<T> {
 		let dna = Self::random_value(sender);
 
 		// Create and store kitty
-		let kitty = Kitty { dna, lifespan: Self::gen_kitty_lifespan(sender), birthday: Self::block_number() };
-		Self::insert_kitty(sender, kitty_id, kitty);
+		Self::insert_kitty(sender, kitty_id, dna);
 
 		Self::deposit_event(RawEvent::Created(sender.clone(), kitty_id));
 		Ok(())
@@ -209,7 +208,12 @@ impl<T: Trait> Module<T> {
 	}
 
 	//noinspection RsBorrowChecker
-	fn insert_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex, kitty: Kitty<T>) {
+	fn insert_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex, dna: [u8; 16]) {
+		let kitty = Kitty {
+			dna,
+			lifespan: Self::gen_kitty_lifespan(owner),
+			birthday: Self::block_number(),
+		};
 		// Create and store kitty
 		<Kitties<T>>::insert(kitty_id, &kitty);
 		<KittiesCount<T>>::put(kitty_id + 1.into());
@@ -266,11 +270,11 @@ impl<T: Trait> Module<T> {
 		let max_breed_age: T::BlockNumber = T::MaxBreedingAge::get();
 		let min_breed_age: T::BlockNumber = T::MinBreedingAge::get();
 
-		ensure!(kitty1_age>=min_breed_age,Error::<T>::Kitty1TooYoung);
-		ensure!(kitty1_age<=max_breed_age,Error::<T>::Kitty1TooOld);
+		ensure!(kitty1_age >= min_breed_age, Error::<T>::Kitty1TooYoung);
+		ensure!(kitty1_age <= max_breed_age, Error::<T>::Kitty1TooOld);
 
-		ensure!(kitty2_age>=min_breed_age,Error::<T>::Kitty2TooYoung);
-		ensure!(kitty2_age<=max_breed_age,Error::<T>::Kitty2TooOld);
+		ensure!(kitty2_age >= min_breed_age, Error::<T>::Kitty2TooYoung);
+		ensure!(kitty2_age <= max_breed_age, Error::<T>::Kitty2TooOld);
 		Ok(())
 	}
 
@@ -300,7 +304,7 @@ impl<T: Trait> Module<T> {
 			new_dna[i] = combine_dna(kitty1_dna[i], kitty2_dna[i], selector[i]);
 		}
 
-		Self::insert_kitty(sender, kitty_id, Kitty { dna: new_dna, lifespan: Self::gen_kitty_lifespan(sender), birthday: Self::block_number() });
+		Self::insert_kitty(sender, kitty_id, new_dna);
 
 		Ok(kitty_id)
 	}
@@ -454,10 +458,27 @@ mod tests {
 	}
 
 	#[test]
-	fn test_print_age_threshold() {
+	fn breed_age() {
 		new_test_ext().execute_with(|| {
-			assert!(<Test as Trait>::MaxBreedingAge::get() > 0);
-			assert!(<Test as Trait>::MinBreedingAge::get() > 0);
+			<system::Module<Test>>::set_extrinsic_index(0);
+			let _ = KittyModule::create_kitty(&1);
+
+			<system::Module<Test>>::set_extrinsic_index(1);
+			let _ = KittyModule::create_kitty(&1);
+
+			assert_eq!(KittyModule::do_breed(&1, 0, 1), Err(DispatchError::Module {
+				index: 0,
+				error: 6,
+				message: Some("Kitty1TooYoung"),
+			}));
+
+			<system::Module<Test>>::set_block_number(<Test as Trait>::MinBreedingAge::get() + MaxBreedingAge::get() * 2 + MaxLifespanDelta::get());
+
+			assert_eq!(KittyModule::do_breed(&1, 0, 1), Err(DispatchError::Module {
+				index: 0,
+				error: 7,
+				message: Some("Kitty1TooOld"),
+			}));
 		});
 	}
 

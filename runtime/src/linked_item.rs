@@ -96,6 +96,7 @@ impl<Storage, Key, Value> LinkedList<Storage, Key, Value> where
 		}
 	}
 
+	#[allow(dead_code)]
 	pub fn collect(key: &Key, mut from: Option<Value>, mut limit: usize) -> (Option<Value>, Vec<Value>) {
 		let mut vec = Vec::new();
 		while limit > 0 {

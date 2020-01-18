@@ -45,6 +45,22 @@ pub trait Trait: system::Trait {
 ### 其他
 * 在 `runtime/src/linked_item.rs` 中增加了个方法, 用于分页读取数据.
 * 增加了大量单元测试. 
+* 使用`polkadot.js.org/apps`  
+  在`https://polkadot.js.org/apps/#/settings/developer`中配置:
+```json
+{
+  "Kitty": {
+    "dna": "[u8;16]",
+    "lifespan": "u32",
+    "birthday": "u32"
+  },
+  "KittyIndex": "u32",
+  "KittyLinkedItem": {
+    "prev": "Option<KittyIndex>",
+    "next": "Option<KittyIndex>"
+  }
+}
+```
 
 ## kitty server 一个中心化服务器
 * 接收所有链上事件, 保存于Sqlite3

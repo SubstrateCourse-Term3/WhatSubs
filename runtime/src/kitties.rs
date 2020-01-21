@@ -40,13 +40,14 @@ decl_storage! {
 	trait Store for Module<T: Trait> as Kitties {
 		/// Stores all the kitties, key is the kitty id / index
 		pub Kitties get(fn kitties): map T::KittyIndex => Option<Kitty<T>>;
-		/// Stores the total number of kitties. i.e. the next kitty index
+		/// Stores the total number of kitties.
 		pub KittiesCount get(fn kitties_count): T::KittyIndex;
 
+		/// the next kitty index
+		KittiesNextId: T::KittyIndex;
 		pub KittyTombs get(fn kitty_tombs): double_map T::BlockNumber, T::KittyIndex => Option<T::KittyIndex>;
 
 		pub OwnedKitties get(fn owned_kitties): map (T::AccountId, Option<T::KittyIndex>) => Option<KittyLinkedItem<T>>;
-
 		/// Get kitty owner
 		pub KittyOwners get(fn kitty_owner): map T::KittyIndex => Option<T::AccountId>;
 		/// Get kitty price. None means not for sale.
@@ -79,7 +80,7 @@ decl_error! {
 		InvalidKittyId,//1
 		KittyNotForSale,//2
 		PriceTooLow,//3
-		KittiesCountOverflow,//4
+		KittiesIdOverflow,//4
 		RequiresDifferentParents,//5
 		Kitty1TooYoung,//6
 		Kitty1TooOld,//7
@@ -200,9 +201,18 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn next_kitty_id() -> result::Result<T::KittyIndex, DispatchError> {
-		let kitty_id = Self::kitties_count();
-		if kitty_id == T::KittyIndex::max_value() {
-			return Err(Error::<T>::KittiesCountOverflow.into());
+		let mut err = false;
+		let kitty_id = KittiesNextId::<T>::mutate(|v| {
+			let tmp = *v;
+			if tmp == T::KittyIndex::max_value() {
+				err = true;
+			} else {
+				*v += 1.into();
+			}
+			tmp
+		});
+		if err {
+			return Err(Error::<T>::KittiesIdOverflow.into());
 		}
 		Ok(kitty_id)
 	}
@@ -216,7 +226,9 @@ impl<T: Trait> Module<T> {
 		};
 		// Create and store kitty
 		<Kitties<T>>::insert(kitty_id, &kitty);
-		<KittiesCount<T>>::put(kitty_id + 1.into());
+		KittiesCount::<T>::mutate(|v| {
+			*v += 1.into();
+		});
 		<KittyOwners<T>>::insert(kitty_id, owner.clone());
 		<OwnedKittiesList<T>>::append(owner, kitty_id);
 		// 保存猫的死亡时间
@@ -317,7 +329,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	#[allow(dead_code)]
-	fn set_kitties_count(c: T::KittyIndex) { <KittiesCount<T>>::put(c); }
+	fn set_kitties_id(c: T::KittyIndex) { <KittiesNextId<T>>::put(c); }
 
 	#[inline]
 	fn block_number() -> T::BlockNumber { <system::Module<T>>::block_number() }
@@ -441,9 +453,9 @@ mod tests {
 	#[test]
 	fn create_kitty_overflow() {
 		new_test_ext().execute_with(|| {
-			KittyModule::set_kitties_count(Bounded::max_value());
+			KittyModule::set_kitties_id(Bounded::max_value());
 			let r = KittyModule::create_kitty(&1);
-			assert_eq!(Err(Error::<Test>::KittiesCountOverflow.into()), r);
+			assert_eq!(r, Err(Error::<Test>::KittiesIdOverflow.into()));
 		});
 	}
 
@@ -505,7 +517,7 @@ mod tests {
 			assert_eq!(KittyOwners::<Test>::get(0), Some(2));
 			assert_eq!(KittyOwners::<Test>::get(1), Some(2));
 
-			assert_eq!(KittiesCount::<Test>::get(), 2);
+			assert_eq!(KittyModule::kitties_count(), 2);
 			let kitty1 = Kitties::<Test>::get(0).unwrap();
 			let kitty2 = Kitties::<Test>::get(1).unwrap();
 			Module::<Test>::kitty_initialize(kitty1.lifespan + kitty1.birthday);
@@ -514,7 +526,7 @@ mod tests {
 			assert_eq!(KittyOwners::<Test>::get(1), None);
 			assert_eq!(Kitties::<Test>::get(0), None);
 			assert_eq!(Kitties::<Test>::get(1), None);
-			assert_eq!(KittiesCount::<Test>::get(), 0);
+			assert_eq!(KittyModule::kitties_count(), 0);
 			assert_eq!(OwnedKittiesListTest::collect(&1, None, 100).1.len(), 0);
 			assert_eq!(OwnedKittiesListTest::collect(&2, None, 100).1.len(), 0);
 		});

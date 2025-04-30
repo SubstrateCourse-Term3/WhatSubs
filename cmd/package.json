@@ -11,8 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@polkadot/api": "^0.99.1",
-    "@polkadot/api-cli": "^0.8.1",
+    "@polkadot/api": "^15.9.2",
+    "@polkadot/api-cli": "^0.63.6",
     "sqlite3": "^4.1.1"
   },
   "devDependencies": {

@@ -13,10 +13,10 @@
   "dependencies": {
     "@polkadot/api": "^0.99.1",
     "@polkadot/api-cli": "^0.8.1",
-    "sqlite3": "^4.1.1"
+    "sqlite3": "^4.2.0"
   },
   "devDependencies": {
-    "@polkadot/dev": "^0.32.13",
+    "@polkadot/dev": "^0.84.3",
     "@polkadot/ts": "^0.1.88"
   }
 }
